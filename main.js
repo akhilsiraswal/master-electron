@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require("electron");
+const { app, BrowserWindow, session } = require("electron");
 const windowStateKeeper = require("electron-window-state");
 
 const colors = require("colors");
@@ -10,6 +10,14 @@ console.log(colors.rainbow("hello"));
 let mainWindow, secondaryWindow;
 
 function createWindow() {
+  let ses = session.defaultSession;
+
+  let getCookies = () => {
+    ses.cookies.get({}, (err, cookies) => {
+      console.log(cookies);
+    });
+  };
+
   // window state manager
   let winState = windowStateKeeper({
     defaultWidth: 1000,
@@ -37,24 +45,25 @@ function createWindow() {
   secondaryWindow = new BrowserWindow({
     width: 500,
     height: 600,
+    x: 200,
+    y: 200,
     webPreferences: {
       contextIsolation: false,
       nodeIntegration: true,
     },
     parent: mainWindow,
     modal: true,
-    show: false,
   });
 
   winState.manage(mainWindow);
 
-  setTimeout(() => {
-    secondaryWindow.show();
-    setTimeout(() => {
-      secondaryWindow.close();
-      secondaryWindow = null;
-    }, 2000);
-  }, 2000);
+  // setTimeout(() => {
+  //   secondaryWindow.show();
+  //   setTimeout(() => {
+  //     secondaryWindow.close();
+  //     secondaryWindow = null;
+  //   }, 2000);
+  // }, 2000);
 
   let wc = mainWindow.webContents;
 
@@ -71,8 +80,14 @@ function createWindow() {
   mainWindow.once("ready-to-show", mainWindow.show); // to show the windows when all the components are saved in the html file  or the file is ready.
   // Load index.html into the new BrowserWindow
 
-  mainWindow.loadFile("index.html");
+  // mainWindow.loadFile("index.html");
+  mainWindow.loadURL("https://github.com");
+  mainWindow.webContents.on("did-finish-load", (e) => {
+    getCookies();
+  });
+
   // mainWindow.loadURL("https://httpbin.org/basic-auth/user/passwd");
+
   secondaryWindow.loadFile("secondary.html");
 
   wc.on("did-navigate", (e, url, statuscode, message) => {
@@ -99,11 +114,14 @@ function createWindow() {
 
   // Open DevTools - Remove for PRODUCTION!
 
-  // mainWindow.webContents.openDevTools();
+  mainWindow.webContents.openDevTools();
 
   // Listen for window being closed
   mainWindow.on("closed", () => {
     mainWindow = null;
+  });
+  secondaryWindow.on("closed", () => {
+    secondaryWindow = null;
   });
 }
 
@@ -115,10 +133,10 @@ app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
 
-app.on("before-quit", (e) => {
-  console.log("preventing app from quitting  ");
-  // e.preventDefault();
-});
+// app.on("before-quit", (e) => {
+//   console.log("preventing app from quitting  ");
+//   // e.preventDefault();
+// });
 
 // app.on("browser-window-blur", (e) => {
 //   console.log("App focused");
